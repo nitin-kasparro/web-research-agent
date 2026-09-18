@@ -6,109 +6,60 @@ from firecrawl.v2.utils.error_handler import WebsiteNotSupportedError
 from google.adk.agents import BaseAgent
 from google.adk.agents.invocation_context import InvocationContext
 from google.adk.events import Event
-
-
-firecrawl = Firecrawl(
-
-)
-
-
-
-# Mock tool implementation
-def get_current_time(city: str) -> dict:
-    """Returns the current time in a specified city."""
-    # time zone logic goes here 
-    return {"status": "success", "city": city, }
-
-def get_weather_report(city:str) -> dict:
-    """Returns the current weather in a specified city."""
-
-    # weather api call goes here 
-    return {
-        "status":"success",
-        "city":city,
-        
-        
-    }
-
-def search_and_read_top_page(query:str)->dict:
-    """Find related web pages, read the highest-ranked page, and return its content."""
-
-    results = firecrawl.search(
-        query=query
-    )
-
-    web_results = results.web or []
-
-    if not web_results:
-        return{
-            "status":"not found",
-            "query":query,
-            "related_pages":[]
-
-        }
-
-    result_pages = [
-        {
-            "title": result.title,
-            "url": result.url,
-            "description": result.description,
-
-        }
-
-        for result in web_results
-    ]
-
-    skipped_pages = []
-
-    # Some search results (for example, maps and protected directory sites)
-    # cannot be scraped by Firecrawl. Try the next result instead of failing
-    # the entire agent request.
-    for page in result_pages[:5]:
-        try:
-            document = firecrawl.scrape(
-                page["url"],
-                formats=["markdown"],
-                only_main_content=True,
-            )
-
-            return {
-                "status": "success",
-                "query": query,
-                "related_pages": result_pages,
-                "top_page": {
-                    **page,
-                    "content": document.markdown or "",
-                },
-                "skipped_pages": skipped_pages,
-            }
-        except WebsiteNotSupportedError:
-            skipped_pages.append(page)
-
-    return {
-        "status": "no_supported_page",
-        "query": query,
-        "related_pages": result_pages,
-        "skipped_pages": skipped_pages,
-    }
-
+from research_agent.firecrawl_tools import search_web,scrape_web_page
 
 
 root_agent = Agent(
-    model='gemini-3.6-flash',
+    model='gemini-3.5-flash-lite',
     name='root_agent',
-    description="Tells the current time in a specified city and Searches the web and summarizes relevant results..",
-    instruction=(
-        "Answer time and weather questions. "
-        "For a research request, call search_and_read_top_page. "
-        "Give the user a concise summary of top_page.content, cite its URL, "
-        "and list the other related_pages as links. If no page could be "
-        "scraped, list the search results and explain that their sites could "
-        "not be read."
-
-        
+     description=(
+        "A web research agent that searches for relevant sources, "
+        "scrapes selected pages, and produces concise cited research briefs."
     ),
-    tools=[get_current_time,get_weather_report,search_and_read_top_page],
+    instruction="""
+        You are a web research agent.
+
+        For every research question, you MUST follow these steps in order:
+
+        STEP 1:
+        Call search_web exactly once.
+
+        STEP 2:
+        Inspect the search results returned by search_web.
+
+        STEP 3:
+        Choose at least 2 relevant results from those search results.
+
+        STEP 4:
+        Call scrape_web_page separately for EACH of the selected URLs.
+
+        You MUST NOT answer the user's research question until you have
+        attempted to scrape at least 2 relevant URLs.
+
+        STEP 5:
+        Use the content returned by scrape_web_page to write the answer.
+
+        IMPORTANT:
+        - Search results are only for discovering sources.
+        - Search result titles and descriptions are NOT evidence.
+        - Do not use a source in the final answer unless you successfully
+        scraped that source.
+        - Do not invent information from a URL that you did not scrape.
+        - If a selected URL fails to scrape, select another search result
+        and try scraping it.
+        - For research questions, the normal tool sequence is:
+
+        search_web
+        -> scrape_web_page
+        -> scrape_web_page
+        -> final answer
+
+        You are a research-only agent. Do not perform actions such as
+        booking flights, making purchases, or sending emails.
+    """,
+
+
+    tools=[search_web,scrape_web_page],
 )
 
 
