@@ -18,3 +18,26 @@
     
 - agent as a tool - when agent A calls agent B as a tool and agent B’s answer si then passed back to agent A and agent A then summarizes the answer or uses the response in some way.
     - it is diff from subagent because subagent because subagent calls another agent as an agnt and here agent A is fully out of the loop the task’s responsibility is fully on agent B
+
+
+    
+f1 - Setup and Installation
+
+firecrawl lets ai agents explore the web it can help website for search , scrape and can also give all the url associated with a website ( search scrape and interact ) 
+
+and ti will be used in the agent tools to scrape websites associated with a query.
+
+it return clean  markdown content agent ready output , 
+
+f2 - firecrawl sdk
+
+**Search Call** 
+
+- fc sdk is just a wrapper around fc api lets u scrape a website too u can interact withthe website click buttons and fill form etc u give it a url and it gves u clean md response
+- it also helps us map a wsbite  ( finds all the relaed url to a website ) firecrawl.map
+- search call take souces , query etc as input → u can also give scrape in the search call jsut give scrpae_option parameter
+
+**Scrape Call** 
+
+- scrape takes  a url as input and gives u clean md content to give to ai agents or llm
+- it provides multi format output ( html , summary , md , rawhtml , images etc)
