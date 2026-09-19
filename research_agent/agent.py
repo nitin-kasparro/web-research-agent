@@ -7,10 +7,14 @@ from google.adk.agents import BaseAgent
 from google.adk.agents.invocation_context import InvocationContext
 from google.adk.events import Event
 from research_agent.firecrawl_tools import search_web,scrape_web_page
+from google.adk.sessions import InMemorySessionService
+
+
+
 
 
 root_agent = Agent(
-    model='gemini-3.5-flash-lite',
+    model='gemini-3.6-flash',
     name='root_agent',
      description=(
         "A web research agent that searches for relevant sources, "
@@ -61,5 +65,3 @@ root_agent = Agent(
 
     tools=[search_web,scrape_web_page],
 )
-
-

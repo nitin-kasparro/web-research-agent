@@ -1,3 +1,12 @@
+"""Firecrawl-backed ADK tools.
+
+Tool tracing is provided automatically by GoogleADKInstrumentor — the ADK
+runtime wraps each tool call in an OpenInference span, so Langfuse sees
+tool inputs and outputs without any manual span code here.
+"""
+from __future__ import annotations
+
+import os
 from typing import Any
 from urllib.parse import urlparse
 
@@ -5,21 +14,16 @@ from firecrawl import Firecrawl
 from firecrawl.v2.utils.error_handler import WebsiteNotSupportedError
 
 
-firecrawl = Firecrawl(
-
-)
+firecrawl = Firecrawl(api_key=os.getenv("FIRECRAWL_API_KEY"))
 
 
-def search_web(query:str, limit:int=5)->dict[str,Any]:
+def search_web(query: str, limit: int = 5) -> dict[str, Any]:
     """Search the web and return candidate sources for research.
 
     This tool ONLY discovers candidate sources.
     After this tool returns, the agent must inspect the results
     and use scrape_web_page on the relevant URLs before answering.
     """
-
-
-
     if not query.strip():
         return {
             "status": "error",
@@ -32,11 +36,10 @@ def search_web(query:str, limit:int=5)->dict[str,Any]:
             "status": "error",
             "error_type": "invalid_limit",
             "message": "limit must be between 1 and 5.",
-        }        
-
+        }
 
     try:
-        results = firecrawl.search(query=query)
+        search_response = firecrawl.search(query=query)
     except Exception as exc:
         return {
             "status": "error",
@@ -44,37 +47,29 @@ def search_web(query:str, limit:int=5)->dict[str,Any]:
             "message": str(exc),
         }
 
-
-    web_results = results.web or []
+    web_results = search_response.web or []
 
     if not web_results:
-        return{
-            "status":"not found",
-            "query":query,
-            "related_pages":[]
-
+        return {
+            "status": "not_found",
+            "query": query,
+            "related_pages": [],
         }
 
-    normalized_results = []
-
-    for result in web_results[:limit]:
-        normalized_results.append(
-            {
-                "title": result.title or "",
-                "url": result.url or "",
-                "description": result.description or "",
-            }
-        )
-
-
-    return{
-        "status":"success",
-        "query":query,
-        "count":len(normalized_results),
-        "results":normalized_results
+    normalized = [
+        {
+            "title": r.title or "",
+            "url": r.url or "",
+            "description": r.description or "",
+        }
+        for r in web_results[:limit]
+    ]
+    return {
+        "status": "success",
+        "query": query,
+        "count": len(normalized),
+        "results": normalized,
     }
-
-
 
 
 def scrape_web_page(url: str) -> dict[str, Any]:
@@ -86,9 +81,7 @@ def scrape_web_page(url: str) -> dict[str, Any]:
     The agent should call this tool separately for each selected
     source URL.
     """
-
     parsed = urlparse(url)
-
     if parsed.scheme not in {"http", "https"} or not parsed.netloc:
         return {
             "status": "error",
@@ -103,25 +96,6 @@ def scrape_web_page(url: str) -> dict[str, Any]:
             formats=["markdown"],
             only_main_content=True,
         )
-
-        markdown = document.markdown or ""
-
-        if not markdown.strip():
-            return {
-                "status": "error",
-                "error_type": "empty_content",
-                "url": url,
-                "message": "Firecrawl returned empty content.",
-            }
-
-        return {
-            "status": "success",
-            "url": url,
-            "title": getattr(document, "title", None) or "",
-            "markdown": markdown,
-            "content_length": len(markdown),
-        }
-
     except WebsiteNotSupportedError:
         return {
             "status": "error",
@@ -129,7 +103,6 @@ def scrape_web_page(url: str) -> dict[str, Any]:
             "url": url,
             "message": "Firecrawl does not support scraping this website.",
         }
-
     except Exception as exc:
         return {
             "status": "error",
@@ -137,3 +110,21 @@ def scrape_web_page(url: str) -> dict[str, Any]:
             "url": url,
             "message": str(exc),
         }
+
+    markdown = document.markdown or ""
+
+    if not markdown.strip():
+        return {
+            "status": "error",
+            "error_type": "empty_content",
+            "url": url,
+            "message": "Firecrawl returned empty content.",
+        }
+
+    return {
+        "status": "success",
+        "url": url,
+        "title": getattr(document, "title", None) or "",
+        "markdown": markdown,
+        "content_length": len(markdown),
+    }
