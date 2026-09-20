@@ -11,7 +11,12 @@ from typing import Any
 from urllib.parse import urlparse
 
 from firecrawl import Firecrawl
-from firecrawl.v2.utils.error_handler import WebsiteNotSupportedError
+from firecrawl.v2.utils.error_handler import (
+    RateLimitError,
+    RequestTimeoutError,
+    UnauthorizedError,
+    WebsiteNotSupportedError,
+)
 
 
 firecrawl = Firecrawl(api_key=os.getenv("FIRECRAWL_API_KEY"))
@@ -40,6 +45,24 @@ def search_web(query: str, limit: int = 5) -> dict[str, Any]:
 
     try:
         search_response = firecrawl.search(query=query)
+    except RateLimitError as exc:
+        return {
+            "status": "error",
+            "error_type": "rate_limit",
+            "message": str(exc),
+        }
+    except UnauthorizedError as exc:
+        return {
+            "status": "error",
+            "error_type": "unauthorized",
+            "message": str(exc),
+        }
+    except RequestTimeoutError as exc:
+        return {
+            "status": "error",
+            "error_type": "timeout",
+            "message": str(exc),
+        }
     except Exception as exc:
         return {
             "status": "error",
@@ -102,6 +125,27 @@ def scrape_web_page(url: str) -> dict[str, Any]:
             "error_type": "website_not_supported",
             "url": url,
             "message": "Firecrawl does not support scraping this website.",
+        }
+    except RateLimitError as exc:
+        return {
+            "status": "error",
+            "error_type": "rate_limit",
+            "url": url,
+            "message": str(exc),
+        }
+    except UnauthorizedError as exc:
+        return {
+            "status": "error",
+            "error_type": "unauthorized",
+            "url": url,
+            "message": str(exc),
+        }
+    except RequestTimeoutError as exc:
+        return {
+            "status": "error",
+            "error_type": "timeout",
+            "url": url,
+            "message": str(exc),
         }
     except Exception as exc:
         return {

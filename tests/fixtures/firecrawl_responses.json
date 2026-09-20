@@ -1,0 +1,27 @@
+{
+  "search_success": {
+    "web": [
+      {
+        "title": "AI coding assistants for junior developers",
+        "url": "https://example.com/ai-assistants-juniors",
+        "description": "Overview of practical benefits and limitations."
+      },
+      {
+        "title": "How AI tools change onboarding",
+        "url": "https://example.com/ai-onboarding",
+        "description": "Case studies on skill development."
+      }
+    ]
+  },
+  "search_empty": {
+    "web": []
+  },
+  "scrape_success": {
+    "markdown": "# AI Coding Assistants\n\nBenefits: faster boilerplate.\nLimitations: skill atrophy.",
+    "title": "AI Coding Assistants"
+  },
+  "scrape_empty": {
+    "markdown": "   ",
+    "title": ""
+  }
+}
