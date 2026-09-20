@@ -14,8 +14,6 @@ import uuid
 from google.adk.runners import Runner
 from google.adk.sessions import InMemorySessionService
 from google.genai import types
-from langfuse import get_client, propagate_attributes
-
 from research_agent.agent import root_agent
 from research_agent.observability import flush_langfuse, setup_observability
 
@@ -32,6 +30,8 @@ async def run_question(
     question: str,
 ) -> str:
     """Run one research turn inside a Langfuse trace and return the final text."""
+    from langfuse import get_client, propagate_attributes
+
     langfuse = get_client()
     trace_name = f"research: {question[:60]}"
 
@@ -64,6 +64,9 @@ async def run_question(
                     final_text = "".join(part.text or "" for part in event.content.parts)
 
             span.update(output=final_text)
+            trace_url = langfuse.get_trace_url()
+            if trace_url:
+                print(f"\n[langfuse] trace: {trace_url}")
             return final_text
 
 
